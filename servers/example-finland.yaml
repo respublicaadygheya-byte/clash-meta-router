@@ -1,0 +1,12 @@
+name: Finland Example
+type: vless
+server: example.com
+port: 443
+uuid: CHANGE-ME
+security: reality
+sni: example.com
+public-key: CHANGE-ME
+short-id: ""
+network: tcp
+flow: xtls-rprx-vision
+client-fingerprint: chrome

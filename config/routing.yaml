@@ -1,0 +1,32 @@
+# Маршрутизация Clash Meta / Mihomo
+
+proxy-groups:
+
+  - name: 🚀 PROXY
+    type: select
+    proxies:
+      - AUTO
+      - DIRECT
+
+  - name: AUTO
+    type: url-test
+    proxies: []
+
+  - name: 🇷🇺 RUSSIA
+    type: select
+    proxies:
+      - DIRECT
+
+rules:
+
+  # Локальные сети
+  - GEOIP,PRIVATE,DIRECT
+
+  # Российские домены
+  - GEOSITE,ru,🇷🇺 RUSSIA
+
+  # Российские IP-адреса
+  - GEOIP,RU,🇷🇺 RUSSIA
+
+  # Всё остальное через VPN
+  - MATCH,🚀 PROXY
