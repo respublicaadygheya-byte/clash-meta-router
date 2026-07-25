@@ -53,7 +53,24 @@ def wait_port(host, port, timeout):
     return False
 
 
+def prepare_proxy_for_mihomo(proxy):
+    prepared = dict(proxy)
+
+    if prepared.get("type") == "hysteria2":
+        username = prepared.pop("username", None)
+        password = prepared.get("password")
+
+        if username and password:
+            prepared["password"] = (
+                f"{username}:{password}"
+            )
+
+    return prepared
+
+
 def make_config(proxy, mixed_port, controller_port):
+    prepared_proxy = prepare_proxy_for_mihomo(proxy)
+
     return {
         "mixed-port": mixed_port,
         "external-controller": (
@@ -64,17 +81,7 @@ def make_config(proxy, mixed_port, controller_port):
         "ipv6": False,
 
         "proxies": [
-            {
-                **proxy,
-                "password": (
-                    str(proxy.get("username")) + ":" + str(proxy.get("password"))
-                    if proxy.get("type") == "hysteria2"
-                    and proxy.get("username")
-                    and proxy.get("password")
-                    else proxy.get("password")
-                ),
-                **({"username": None} if proxy.get("type") == "hysteria2" else {}),
-            }
+            prepared_proxy
         ],
 
         "proxy-groups": [

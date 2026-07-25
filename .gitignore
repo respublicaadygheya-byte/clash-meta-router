@@ -1,0 +1,12 @@
+# Python
+__pycache__/
+*.pyc
+
+# Runtime/cache data
+config/cache.db
+config/geoip.metadb
+cache/
+logs/
+
+# Generated/runtime configs
+config/generated.yaml

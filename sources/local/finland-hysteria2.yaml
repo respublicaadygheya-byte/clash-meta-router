@@ -1,0 +1,8 @@
+proxies:
+  - name: 🇫🇮 Finland Hysteria2
+    type: hysteria2
+    server: cloudioxa.duckdns.org
+    port: 443
+    username: default
+    password: zG7yqufT5HccjgnMVaCdOwB0
+    sni: cloudioxa.duckdns.org

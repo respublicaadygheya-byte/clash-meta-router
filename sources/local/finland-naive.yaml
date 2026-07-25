@@ -1,0 +1,7 @@
+proxies:
+  - name: 🇫🇮 Finland NaiveProxy
+    type: naive
+    server: cloudioxa.duckdns.org
+    port: 443
+    username: XAz64e4ORxzju1WP
+    password: RT2hmjwZRxb3GiBK14kFr5pM
