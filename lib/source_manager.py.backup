@@ -1,0 +1,183 @@
+#!/usr/bin/env python3
+
+from pathlib import Path
+import json
+import yaml
+
+from sources.links import fetch_links
+from sources.clash_yaml import fetch_clash_yaml
+from sources.local_yaml import fetch_local_yaml
+
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+CONFIG_FILE = (
+    BASE_DIR /
+    "config" /
+    "subscriptions.yaml"
+)
+
+OUTPUT_FILE = (
+    BASE_DIR /
+    "cache" /
+    "imported" /
+    "external_proxies.json"
+)
+
+
+def load_sources():
+    if not CONFIG_FILE.exists():
+        print(
+            f"❌ Не найден файл: {CONFIG_FILE}"
+        )
+        return []
+
+    with CONFIG_FILE.open(
+        "r",
+        encoding="utf-8"
+    ) as f:
+        data = yaml.safe_load(f) or {}
+
+    return data.get(
+        "subscriptions",
+        []
+    )
+
+
+def import_source(source):
+
+    source_type = (
+        source.get(
+            "type",
+            "links"
+        )
+        .lower()
+    )
+
+    name = source.get(
+        "name",
+        "Unnamed"
+    )
+
+
+    if source_type == "links":
+
+        return fetch_links(
+            source
+        )
+
+
+    if source_type in (
+        "clash_yaml",
+        "clash"
+    ):
+
+        return fetch_clash_yaml(
+            source
+        )
+
+
+    if source_type in (
+        "local_yaml",
+        "local"
+    ):
+
+        return fetch_local_yaml(
+            source,
+            BASE_DIR
+        )
+
+
+    print(
+        f"⚠️ Неизвестный тип "
+        f"{source_type}: {name}"
+    )
+
+    return []
+
+
+def main():
+
+    sources = load_sources()
+
+    if not sources:
+        print(
+            "⚠️ Источники отсутствуют"
+        )
+        return
+
+
+    all_proxies = []
+
+    print()
+    print(
+        "📥 SOURCE MANAGER"
+    )
+    print(
+        "================="
+    )
+
+
+    for source in sources:
+
+        name = source.get(
+            "name",
+            "Unnamed"
+        )
+
+        print()
+        print(
+            f"Источник: {name}"
+        )
+
+        proxies = import_source(
+            source
+        )
+
+
+        for proxy in proxies:
+
+            if isinstance(
+                proxy,
+                dict
+            ):
+
+                proxy["_source"] = name
+                all_proxies.append(proxy)
+
+
+
+    OUTPUT_FILE.parent.mkdir(
+        parents=True,
+        exist_ok=True
+    )
+
+
+    with OUTPUT_FILE.open(
+        "w",
+        encoding="utf-8"
+    ) as f:
+
+        json.dump(
+            all_proxies,
+            f,
+            ensure_ascii=False,
+            indent=2
+        )
+
+
+    print()
+    print(
+        "================="
+    )
+    print(
+        f"Всего импортировано: "
+        f"{len(all_proxies)}"
+    )
+    print(
+        f"Файл: {OUTPUT_FILE}"
+    )
+
+
+if __name__ == "__main__":
+    main()

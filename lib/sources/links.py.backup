@@ -1,0 +1,147 @@
+from urllib.parse import parse_qs, unquote, urlparse
+
+
+
+def decode_content(content: str) -> list:
+    """
+    Определяет обычный список ссылок
+    или Base64 подписку
+    """
+
+    lines = content.splitlines()
+
+    direct = [
+        x.strip()
+        for x in lines
+        if "://" in x
+    ]
+
+    if direct:
+        return direct
+
+
+    try:
+        import base64
+
+        decoded = base64.b64decode(
+            content
+        ).decode(
+            "utf-8",
+            errors="ignore"
+        )
+
+        return decoded.splitlines()
+
+    except Exception:
+        return []
+
+
+
+def parse_link(line: str) -> dict | None:
+    line = line.strip()
+    if not line or line.startswith("#"):
+        return None
+
+    try:
+        parsed = urlparse(line)
+    except Exception:
+        return None
+
+    scheme = parsed.scheme.lower()
+
+    if scheme not in ("vless", "trojan", "ss", "hysteria2", "hy2", "tuic"):
+        return None
+
+    try:
+        server = parsed.hostname
+        port = parsed.port
+    except Exception:
+        return None
+
+    if not server or not port:
+        return None
+
+    name = unquote(parsed.fragment) if parsed.fragment else f"{scheme.upper()}-{server}:{port}"
+    params = parse_qs(parsed.query)
+
+    proxy = {
+        "name": name,
+        "type": "hysteria2" if scheme == "hy2" else scheme,
+        "server": server,
+        "port": port,
+    }
+
+    if scheme == "vless":
+        proxy["uuid"] = unquote(parsed.username or "")
+        proxy["cipher"] = params.get("encryption", ["none"])[0]
+        proxy["udp"] = True
+        net = params.get("type", ["tcp"])[0]
+        proxy["network"] = net
+        proxy["tls"] = params.get("security", ["none"])[0] != "none"
+
+        if "sni" in params:
+            proxy["servername"] = params["sni"][0]
+        if "fp" in params:
+            proxy["client-fingerprint"] = params["fp"][0]
+        if "pbk" in params:
+            proxy["reality-opts"] = {"public-key": params["pbk"][0]}
+            if "sid" in params:
+                proxy["reality-opts"]["short-id"] = params["sid"][0]
+
+        if "flow" in params:
+            proxy["flow"] = params["flow"][0]
+
+        if net == "ws":
+            proxy["ws-opts"] = {"path": params.get("path", ["/"])[0]}
+            if "host" in params:
+                proxy["ws-opts"]["headers"] = {"Host": params["host"][0]}
+        elif net == "grpc":
+            proxy["grpc-opts"] = {"grpc-service-name": params.get("serviceName", [""])[0]}
+
+    elif scheme in ("trojan", "hysteria2", "hy2"):
+        proxy["password"] = parsed.username or parsed.password or ""
+        if "sni" in params:
+            proxy["sni"] = params["sni"][0]
+
+    return proxy
+
+
+def fetch_links(source_config: dict) -> list[dict]:
+    import base64
+    import urllib.request
+
+    url = source_config.get("url")
+    name = source_config.get("name", "Links")
+    if not url:
+        return []
+
+    req = urllib.request.Request(
+        url,
+        headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
+    )
+
+    result = []
+    errors = 0
+
+    try:
+        with urllib.request.urlopen(req, timeout=15) as response:
+            content = response.read().decode("utf-8", errors="ignore").strip()
+
+            try:
+                decoded = base64.b64decode(content).decode("utf-8", errors="ignore")
+                lines = decoded.splitlines()
+            except Exception:
+                lines = content.splitlines()
+
+            for line in lines:
+                proxy = parse_link(line)
+                if proxy:
+                    result.append(proxy)
+                else:
+                    errors += 1
+
+        print(f"✅ [{name}] импортировано: {len(result)}, пропущено: {errors}")
+    except Exception as e:
+        print(f"❌ [{name}] ошибка загрузки ({url}): {e}")
+
+    return result

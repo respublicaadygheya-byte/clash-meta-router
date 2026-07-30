@@ -1,0 +1,101 @@
+#!/usr/bin/env python3
+
+from pathlib import Path
+import json
+
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+INPUT = (
+    BASE_DIR /
+    "cache" /
+    "filtered" /
+    "mobile_fast.json"
+)
+
+OUTPUT = (
+    BASE_DIR /
+    "cache" /
+    "filtered" /
+    "mobile_primary.json"
+)
+
+
+GOOD_FP = {
+    "chrome",
+    "firefox",
+    "qq",
+}
+
+
+def main():
+
+    with INPUT.open(encoding="utf-8") as f:
+        data=json.load(f)
+
+
+    primary=[]
+
+    for p in data["FAST_TCP_443"]:
+
+        if not p.get("reality-opts"):
+            continue
+
+        fp=p.get(
+            "client-fingerprint"
+        )
+
+        if fp and fp not in GOOD_FP:
+            continue
+
+        primary.append(p)
+
+
+    primary.sort(
+        key=lambda x:
+        x.get("_check", {})
+        .get("latency_ms",99999)
+    )
+
+
+    with OUTPUT.open(
+        "w",
+        encoding="utf-8"
+    ) as f:
+        json.dump(
+            primary,
+            f,
+            ensure_ascii=False,
+            indent=2
+        )
+
+
+    print("MOBILE PRIMARY")
+    print("================")
+    print("Nodes:",len(primary))
+
+    if primary:
+        lat=[
+            x["_check"]["latency_ms"]
+            for x in primary
+        ]
+
+        print(
+            "AVG:",
+            round(sum(lat)/len(lat),2)
+        )
+
+        print(
+            "BEST:",
+            round(min(lat),2)
+        )
+
+
+    print(
+        "FILE:",
+        OUTPUT
+    )
+
+
+if __name__=="__main__":
+    main()
