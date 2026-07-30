@@ -137,6 +137,18 @@ def main():
         })
 
     all_proxies = []
+    seen = set()
+    duplicates = 0
+
+    def proxy_key(proxy):
+        return (
+            proxy.get("server"),
+            proxy.get("port"),
+            proxy.get("uuid"),
+            proxy.get("servername"),
+            proxy.get("network"),
+            proxy.get("flow"),
+        )
 
     for subscription in subscriptions:
         if not subscription.get("enabled", True):
@@ -179,6 +191,13 @@ def main():
                 )
 
                 if proxy:
+                    key = proxy_key(proxy)
+
+                    if key in seen:
+                        duplicates += 1
+                        continue
+
+                    seen.add(key)
                     all_proxies.append(proxy)
 
             except Exception as e:
@@ -193,6 +212,7 @@ def main():
 
     print()
     print(f"ИТОГО ИМПОРТИРОВАНО: {len(all_proxies)}")
+    print(f"ДУБЛИКАТОВ УДАЛЕНО: {duplicates}")
     print(f"РЕЗУЛЬТАТ: {OUTPUT_FILE}")
 
 
