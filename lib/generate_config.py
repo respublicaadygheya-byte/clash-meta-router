@@ -71,6 +71,9 @@ def generate_mihomo_config():
     }
 
     OUTPUT_CONFIG.parent.mkdir(parents=True, exist_ok=True)
+    openclash_path = BASE_DIR / "config" / "openclash.yaml"
+    with openclash_path.open("w", encoding="utf-8") as f_oc:
+        yaml.dump(config, f_oc, allow_unicode=True, sort_keys=False)
     with OUTPUT_CONFIG.open("w", encoding="utf-8") as f:
         yaml.dump(config, f, allow_unicode=True, sort_keys=False)
 

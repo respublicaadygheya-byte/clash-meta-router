@@ -14,6 +14,7 @@ SOURCES_DIR = BASE_DIR / "sources"
 CACHE_DIR = BASE_DIR / "cache"
 IMPORTED_DIR = CACHE_DIR / "imported"
 OUTPUT_FILE = IMPORTED_DIR / "proxies.json"
+SUB_PROXIES_FILE = IMPORTED_DIR / "subscription_proxies.json"
 
 
 SUPPORTED_TYPES = {
@@ -97,6 +98,7 @@ def find_source_files():
         for path in SOURCES_DIR.rglob("*")
         if path.is_file()
         and path.suffix.lower() in {".yaml", ".yml"}
+        and path.name != "remote.yaml"
     )
 
 
@@ -117,7 +119,7 @@ def main():
     else:
         source_files = find_source_files()
 
-    if not source_files:
+    if not source_files and not SUB_PROXIES_FILE.exists():
         print("Источники не найдены.")
         sys.exit(1)
 
@@ -125,6 +127,21 @@ def main():
     source_stats = Counter()
     type_stats = Counter()
     duplicates = 0
+
+    if SUB_PROXIES_FILE.exists():
+        with SUB_PROXIES_FILE.open("r", encoding="utf-8") as f:
+            subscription_proxies = json.load(f)
+
+        for proxy in subscription_proxies:
+            key = proxy_key(proxy)
+
+            if any(proxy_key(existing) == key for existing in all_proxies):
+                duplicates += 1
+                continue
+
+            all_proxies.append(proxy)
+            source_stats[proxy.get("_source", "subscription")] += 1
+            type_stats[proxy.get("type")] += 1
 
     for path in source_files:
         print(f"Импорт: {path}")

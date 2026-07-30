@@ -33,6 +33,9 @@ show_help() {
 
 
 cmd_import() {
+
+    python3 "$BASE_DIR/lib/import_subscriptions.py"
+
     if [[ $# -gt 0 ]]; then
         python3 "$IMPORTER" --input "$1"
     else
