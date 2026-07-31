@@ -22,6 +22,7 @@ GROUP_FOREIGN = "🌐 FOREIGN"
 GROUP_FOREIGN_AUTO = "🌐 FOREIGN-AUTO"
 
 GROUP_RUSSIA = "🇷🇺 RUSSIA"
+GROUP_RUSSIA_AUTO = "🇷🇺 RUSSIA-AUTO"
 
 RULE_PRIVATE = "DIRECT"
 
@@ -160,14 +161,6 @@ def make_unique_proxy_names(proxies):
 
 
 def is_ru_node(proxy: dict) -> bool:
-    role = str(proxy.get("role", "")).lower()
-
-    if role == "foreign":
-        return False
-
-    if role == "ru":
-        return True
-
     country_code = str(proxy.get("country_code", "")).upper()
     country = str(proxy.get("country", "")).lower()
 
@@ -260,8 +253,18 @@ def generate_mihomo_config():
     })
 
 
+    if ru_names:
+        groups.append({
+            "name": GROUP_RUSSIA_AUTO,
+            "type": "url-test",
+            "url": "http://cp.cloudflare.com/generate_204",
+            "interval": 300,
+            "tolerance": 50,
+            "proxies": ru_names
+        })
+
     russia_proxies = (
-        ru_names
+        [GROUP_RUSSIA_AUTO] + ru_names
         if ru_names
         else ["DIRECT"]
     )
@@ -317,7 +320,7 @@ def generate_mihomo_config():
             ]
             + [
                 "GEOIP,private,DIRECT,no-resolve",
-                "MATCH,🚀 PROXY"
+                "MATCH,🌐 FOREIGN"
             ]
         )
     }
