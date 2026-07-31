@@ -1,0 +1,5 @@
+# One domain per line
+# Example:
+# youtube.com
+# chat.openai.com
+# googlevideo.com

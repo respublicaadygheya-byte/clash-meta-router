@@ -1,0 +1,5 @@
+# One domain per line
+# Example:
+# yandex.ru
+# gosuslugi.ru
+# ozon.ru

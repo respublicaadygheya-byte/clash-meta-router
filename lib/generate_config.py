@@ -1,12 +1,21 @@
 from pathlib import Path
 import json
+import ipaddress
+import re
 import yaml
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 AVAILABLE_FILE = BASE_DIR / "cache" / "filtered" / "available.json"
 OUTPUT_CONFIG = BASE_DIR / "config" / "generated.yaml"
 
-INTERNAL_KEYS = {"_source", "_check", "exit_ip", "country", "country_code", "available"}
+RULES_DIR = BASE_DIR / "config" / "rules"
+VPN_DOMAINS_FILE = RULES_DIR / "vpn_domains.txt"
+DIRECT_DOMAINS_FILE = RULES_DIR / "direct_domains.txt"
+VPN_IPS_FILE = RULES_DIR / "vpn_ips.txt"
+DIRECT_IPS_FILE = RULES_DIR / "direct_ips.txt"
+
+
+INTERNAL_KEYS = {"_source", "_check", "exit_ip", "country", "country_code", "available", "role"}
 
 def clean_proxy_config(proxy: dict) -> dict:
     cleaned = {k: v for k, v in proxy.items() if k not in INTERNAL_KEYS and not str(k).startswith("_")}
@@ -35,6 +44,88 @@ def clean_proxy_config(proxy: dict) -> dict:
 
     return cleaned
 
+
+
+def load_domain_list(path: Path):
+    if not path.exists():
+        return []
+
+    result = []
+
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+
+        if not line or line.startswith("#"):
+            continue
+
+        result.append(line)
+
+    return result
+
+
+
+
+
+def normalize_domain(domain: str):
+    domain = domain.strip().lower()
+
+    if not domain:
+        return None
+
+    if domain.startswith("http://"):
+        domain = domain[7:]
+
+    elif domain.startswith("https://"):
+        domain = domain[8:]
+
+    if domain.startswith("domain-suffix,"):
+        domain = domain[14:]
+
+    domain = domain.rstrip("/")
+
+    if ":" in domain:
+        domain = domain.split(":", 1)[0]
+
+    if not re.fullmatch(r"[a-z0-9.-]+", domain):
+        print(f"WARNING: invalid domain skipped: {domain}")
+        return None
+
+    if "." not in domain:
+        print(f"WARNING: invalid domain skipped: {domain}")
+        return None
+
+    return domain
+
+
+
+def unique_sorted(items):
+    return sorted(set(items))
+
+
+def validate_ip_rule(ip: str):
+    try:
+        if "/" in ip:
+            ipaddress.ip_network(ip, strict=False)
+        else:
+            ipaddress.ip_address(ip)
+        return True
+    except ValueError:
+        print(f"WARNING: invalid IP skipped: {ip}")
+        return False
+
+
+def normalize_ip_rule(ip: str) -> str:
+    ip = ip.strip()
+
+    if "/" not in ip:
+        ip += "/32"
+
+    return ip
+
+
+def is_ru_node(proxy: dict) -> bool:
+    return str(proxy.get("role", "")).strip().lower() == "ru"
+
 def generate_mihomo_config():
     if not AVAILABLE_FILE.exists():
         print("AVAILABLE_FILE NOT FOUND")
@@ -47,8 +138,92 @@ def generate_mihomo_config():
         print("EMPTY PROXIES LIST")
         return
 
-    clean_proxies = [clean_proxy_config(p) for p in available_proxies]
-    proxy_names = [p["name"] for p in clean_proxies if "name" in p]
+    vpn_domains = [
+        d for d in
+        (normalize_domain(x) for x in load_domain_list(VPN_DOMAINS_FILE))
+        if d
+    ]
+
+    direct_domains = [
+        d for d in
+        (normalize_domain(x) for x in load_domain_list(DIRECT_DOMAINS_FILE))
+        if d
+    ]
+
+    vpn_ips = load_domain_list(VPN_IPS_FILE)
+    direct_ips = load_domain_list(DIRECT_IPS_FILE)
+
+    vpn_domains = unique_sorted(vpn_domains)
+    direct_domains = unique_sorted(direct_domains)
+    vpn_ips = unique_sorted(vpn_ips)
+    direct_ips = unique_sorted(direct_ips)
+
+    print(f"VPN domains: {len(vpn_domains)}")
+    print(f"DIRECT domains: {len(direct_domains)}")
+    print(f"VPN IPs: {len(vpn_ips)}")
+    print(f"DIRECT IPs: {len(direct_ips)}")
+
+    foreign = []
+    ru = []
+
+    for proxy in available_proxies:
+        cleaned = clean_proxy_config(proxy)
+        if "name" not in cleaned:
+            continue
+
+        if is_ru_node(proxy):
+            ru.append(cleaned)
+        else:
+            foreign.append(cleaned)
+
+    clean_proxies = foreign + ru
+
+    foreign_names = [p["name"] for p in foreign]
+    ru_names = [p["name"] for p in ru]
+
+    groups = []
+
+    if foreign_names:
+        groups.append({
+            "name": "🌐 FOREIGN-AUTO",
+            "type": "url-test",
+            "url": "http://cp.cloudflare.com/generate_204",
+            "interval": 300,
+            "tolerance": 50,
+            "proxies": foreign_names
+        })
+
+        groups.append({
+            "name": "🌐 FOREIGN",
+            "type": "select",
+            "proxies": ["🌐 FOREIGN-AUTO", "DIRECT"] + foreign_names
+        })
+
+    if ru_names:
+        groups.append({
+            "name": "🇷🇺 RU-AUTO",
+            "type": "url-test",
+            "url": "http://cp.cloudflare.com/generate_204",
+            "interval": 300,
+            "tolerance": 50,
+            "proxies": ru_names
+        })
+
+        groups.append({
+            "name": "🇷🇺 RU",
+            "type": "select",
+            "proxies": ["🇷🇺 RU-AUTO", "DIRECT"] + ru_names
+        })
+
+    groups.insert(0,{
+        "name":"🚀 PROXY",
+        "type":"select",
+        "proxies":[
+            "🌐 FOREIGN" if foreign_names else "DIRECT",
+            "🇷🇺 RU" if ru_names else "DIRECT",
+            "DIRECT"
+        ]
+    })
 
     config = {
         "mixed-port": 7890,
@@ -58,26 +233,38 @@ def generate_mihomo_config():
         "ipv6": False,
         "external-controller": "127.0.0.1:9090",
         "proxies": clean_proxies,
-        "proxy-groups": [
-            {
-                "name": "PROXY",
-                "type": "select",
-                "proxies": proxy_names
-            }
-        ],
-        "rules": [
-            "MATCH,PROXY"
-        ]
+        "proxy-groups": groups,
+        "rules": (
+            [f"DOMAIN-SUFFIX,{d},🚀 PROXY" for d in vpn_domains]
+            + [f"DOMAIN-SUFFIX,{d},DIRECT" for d in direct_domains]
+            + [
+                f"IP-CIDR,{normalize_ip_rule(ip)},🚀 PROXY,no-resolve"
+                for ip in vpn_ips
+                if validate_ip_rule(ip)
+            ]
+            + [
+                f"IP-CIDR,{normalize_ip_rule(ip)},DIRECT,no-resolve"
+                for ip in direct_ips
+                if validate_ip_rule(ip)
+            ]
+            + [
+                "GEOIP,private,DIRECT,no-resolve",
+                "MATCH,🚀 PROXY"
+            ]
+        )
     }
 
     OUTPUT_CONFIG.parent.mkdir(parents=True, exist_ok=True)
+
     openclash_path = BASE_DIR / "config" / "openclash.yaml"
-    with openclash_path.open("w", encoding="utf-8") as f_oc:
-        yaml.dump(config, f_oc, allow_unicode=True, sort_keys=False)
+
+    with openclash_path.open("w", encoding="utf-8") as f:
+        yaml.dump(config, f, allow_unicode=True, sort_keys=False)
+
     with OUTPUT_CONFIG.open("w", encoding="utf-8") as f:
         yaml.dump(config, f, allow_unicode=True, sort_keys=False)
 
-    print("CONFIG GENERATED OK")
+    print(f"CONFIG GENERATED OK: foreign={len(foreign)} ru={len(ru)}")
 
 if __name__ == "__main__":
     generate_mihomo_config()

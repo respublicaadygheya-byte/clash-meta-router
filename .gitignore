@@ -2,11 +2,20 @@
 __pycache__/
 *.pyc
 
-# Runtime/cache data
-config/cache.db
-config/geoip.metadb
-cache/
-logs/
-
-# Generated/runtime configs
+# Generated configs
 config/generated.yaml
+config/openclash.yaml
+
+# Temporary files
+*.bak
+*.backup
+*.old
+*.tmp
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Runtime cache
+cache/
