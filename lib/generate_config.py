@@ -218,15 +218,22 @@ def generate_mihomo_config():
             "proxies": foreign_names
         })
 
-        groups.append({
-            "name": "🌐 FOREIGN",
-            "type": "select",
-            "proxies": ["🌐 FOREIGN-AUTO", "DIRECT"] + foreign_names
-        })
+    foreign_proxies = (
+        ["🌐 FOREIGN-AUTO"] + foreign_names
+        if foreign_names
+        else ["DIRECT"]
+    )
+
+    groups.append({
+        "name": "🌐 FOREIGN",
+        "type": "select",
+        "proxies": foreign_proxies
+    })
+
 
     if ru_names:
         groups.append({
-            "name": "🇷🇺 RU-AUTO",
+            "name": "🇷🇺 RUSSIA-AUTO",
             "type": "url-test",
             "url": "http://cp.cloudflare.com/generate_204",
             "interval": 300,
@@ -234,18 +241,25 @@ def generate_mihomo_config():
             "proxies": ru_names
         })
 
-        groups.append({
-            "name": "🇷🇺 RU",
-            "type": "select",
-            "proxies": ["🇷🇺 RU-AUTO", "DIRECT"] + ru_names
-        })
+    russia_proxies = (
+        ["🇷🇺 RUSSIA-AUTO"] + ru_names
+        if ru_names
+        else ["DIRECT"]
+    )
+
+    groups.append({
+        "name": "🇷🇺 RUSSIA",
+        "type": "select",
+        "proxies": russia_proxies
+    })
+
 
     groups.insert(0,{
         "name":"🚀 PROXY",
         "type":"select",
         "proxies":[
-            "🌐 FOREIGN" if foreign_names else "DIRECT",
-            "🇷🇺 RU" if ru_names else "DIRECT",
+            "🌐 FOREIGN",
+            "🇷🇺 RUSSIA",
             "DIRECT"
         ]
     })
@@ -260,21 +274,21 @@ def generate_mihomo_config():
         "proxies": clean_proxies,
         "proxy-groups": groups,
         "rules": (
-            [f"DOMAIN-SUFFIX,{d},🚀 PROXY" for d in vpn_domains]
-            + [f"DOMAIN-SUFFIX,{d},DIRECT" for d in direct_domains]
+            [f"DOMAIN-SUFFIX,{d},🌐 FOREIGN" for d in vpn_domains]
+            + [f"DOMAIN-SUFFIX,{d},🇷🇺 RUSSIA" for d in direct_domains]
             + [
-                f"IP-CIDR,{normalize_ip_rule(ip)},🚀 PROXY,no-resolve"
+                f"IP-CIDR,{normalize_ip_rule(ip)},🌐 FOREIGN,no-resolve"
                 for ip in vpn_ips
                 if validate_ip_rule(ip)
             ]
             + [
-                f"IP-CIDR,{normalize_ip_rule(ip)},DIRECT,no-resolve"
+                f"IP-CIDR,{normalize_ip_rule(ip)},🇷🇺 RUSSIA,no-resolve"
                 for ip in direct_ips
                 if validate_ip_rule(ip)
             ]
             + [
                 "GEOIP,private,DIRECT,no-resolve",
-                "MATCH,🚀 PROXY"
+                "MATCH,🌐 FOREIGN"
             ]
         )
     }

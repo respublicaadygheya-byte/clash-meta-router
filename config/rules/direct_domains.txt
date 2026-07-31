@@ -1,5 +1,19 @@
-# One domain per line
-# Example:
-# yandex.ru
-# gosuslugi.ru
-# ozon.ru
+yandex.ru
+ya.ru
+mail.ru
+vk.com
+ok.ru
+gosuslugi.ru
+sber.ru
+alfabank.ru
+tbank.ru
+vtb.ru
+ozon.ru
+wildberries.ru
+market.yandex.ru
+avito.ru
+2gis.ru
+kinopoisk.ru
+ivi.ru
+okko.tv
+rutube.ru
