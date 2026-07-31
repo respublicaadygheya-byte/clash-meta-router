@@ -22,3 +22,9 @@ cache/
 
 # Local private proxies
 sources/local/*.yaml
+# Generated configs
+config/generated.yaml
+
+# Local backups
+*.final
+*.before_*
