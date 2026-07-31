@@ -19,3 +19,6 @@ Thumbs.db
 
 # Runtime cache
 cache/
+
+# Local private proxies
+sources/local/*.yaml

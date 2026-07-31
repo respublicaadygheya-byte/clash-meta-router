@@ -206,6 +206,7 @@ def generate_mihomo_config():
     print(f"VPN IPs: {len(vpn_ips)}")
     print(f"DIRECT IPs: {len(direct_ips)}")
 
+    own = []
     foreign = []
     ru = []
 
@@ -214,13 +215,16 @@ def generate_mihomo_config():
         if "name" not in cleaned:
             continue
 
-        if is_ru_node(proxy):
+        if proxy.get("role") == "own":
+            own.append(cleaned)
+        elif is_ru_node(proxy):
             ru.append(cleaned)
         else:
             foreign.append(cleaned)
 
-    clean_proxies = make_unique_proxy_names(foreign + ru)
+    clean_proxies = make_unique_proxy_names(own + foreign + ru)
 
+    own_names = [p["name"] for p in own]
     foreign_names = [p["name"] for p in foreign]
     ru_names = [p["name"] for p in ru]
 
@@ -272,10 +276,20 @@ def generate_mihomo_config():
     })
 
 
+    if own_names:
+        groups.append({
+            "name": "⭐ OWN",
+            "type": "select",
+            "proxies": own_names
+        })
+
+
     groups.insert(0,{
         "name":GROUP_PROXY,
         "type":"select",
-        "proxies":[
+        "proxies":(
+            ["⭐ OWN"] if own else []
+        ) + [
             GROUP_FOREIGN,
             GROUP_RUSSIA,
             "DIRECT"
@@ -321,7 +335,7 @@ def generate_mihomo_config():
     with OUTPUT_CONFIG.open("w", encoding="utf-8") as f:
         yaml.dump(config, f, allow_unicode=True, sort_keys=False)
 
-    print(f"CONFIG GENERATED OK: foreign={len(foreign)} ru={len(ru)}")
+    print(f"CONFIG GENERATED OK: own={len(own)} foreign={len(foreign)} ru={len(ru)}")
 
 if __name__ == "__main__":
     generate_mihomo_config()
