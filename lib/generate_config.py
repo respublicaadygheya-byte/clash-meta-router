@@ -15,6 +15,18 @@ VPN_IPS_FILE = RULES_DIR / "vpn_ips.txt"
 DIRECT_IPS_FILE = RULES_DIR / "direct_ips.txt"
 
 
+# Proxy group names
+GROUP_PROXY = "🚀 PROXY"
+
+GROUP_FOREIGN = "🌐 FOREIGN"
+GROUP_FOREIGN_AUTO = "🌐 FOREIGN-AUTO"
+
+GROUP_RUSSIA = "🇷🇺 RUSSIA"
+GROUP_RUSSIA_AUTO = "🇷🇺 RUSSIA-AUTO"
+
+RULE_PRIVATE = "DIRECT"
+
+
 INTERNAL_KEYS = {"_source", "_check", "exit_ip", "country", "country_code", "available", "role"}
 
 def clean_proxy_config(proxy: dict) -> dict:
@@ -210,7 +222,7 @@ def generate_mihomo_config():
 
     if foreign_names:
         groups.append({
-            "name": "🌐 FOREIGN-AUTO",
+            "name": GROUP_FOREIGN_AUTO,
             "type": "url-test",
             "url": "http://cp.cloudflare.com/generate_204",
             "interval": 300,
@@ -219,13 +231,13 @@ def generate_mihomo_config():
         })
 
     foreign_proxies = (
-        ["🌐 FOREIGN-AUTO"] + foreign_names
+        [GROUP_FOREIGN_AUTO] + foreign_names
         if foreign_names
         else ["DIRECT"]
     )
 
     groups.append({
-        "name": "🌐 FOREIGN",
+        "name": GROUP_FOREIGN,
         "type": "select",
         "proxies": foreign_proxies
     })
@@ -233,7 +245,7 @@ def generate_mihomo_config():
 
     if ru_names:
         groups.append({
-            "name": "🇷🇺 RUSSIA-AUTO",
+            "name": GROUP_RUSSIA_AUTO,
             "type": "url-test",
             "url": "http://cp.cloudflare.com/generate_204",
             "interval": 300,
@@ -242,24 +254,24 @@ def generate_mihomo_config():
         })
 
     russia_proxies = (
-        ["🇷🇺 RUSSIA-AUTO"] + ru_names
+        [GROUP_RUSSIA_AUTO] + ru_names
         if ru_names
         else ["DIRECT"]
     )
 
     groups.append({
-        "name": "🇷🇺 RUSSIA",
+        "name": GROUP_RUSSIA,
         "type": "select",
         "proxies": russia_proxies
     })
 
 
     groups.insert(0,{
-        "name":"🚀 PROXY",
+        "name":GROUP_PROXY,
         "type":"select",
         "proxies":[
-            "🌐 FOREIGN",
-            "🇷🇺 RUSSIA",
+            GROUP_FOREIGN,
+            GROUP_RUSSIA,
             "DIRECT"
         ]
     })
