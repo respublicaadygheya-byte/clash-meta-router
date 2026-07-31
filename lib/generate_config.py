@@ -123,6 +123,31 @@ def normalize_ip_rule(ip: str) -> str:
     return ip
 
 
+
+def make_unique_proxy_names(proxies):
+    used = {}
+    result = []
+
+    for proxy in proxies:
+        name = proxy.get("name", "proxy")
+
+        if name not in used:
+            used[name] = 1
+            result.append(proxy)
+            continue
+
+        used[name] += 1
+
+        new_name = f"{name} #{used[name]}"
+
+        proxy["name"] = new_name
+        result.append(proxy)
+
+        print(f"RENAMED DUPLICATE: {name} -> {new_name}")
+
+    return result
+
+
 def is_ru_node(proxy: dict) -> bool:
     return str(proxy.get("role", "")).strip().lower() == "ru"
 
@@ -176,7 +201,7 @@ def generate_mihomo_config():
         else:
             foreign.append(cleaned)
 
-    clean_proxies = foreign + ru
+    clean_proxies = make_unique_proxy_names(foreign + ru)
 
     foreign_names = [p["name"] for p in foreign]
     ru_names = [p["name"] for p in ru]
