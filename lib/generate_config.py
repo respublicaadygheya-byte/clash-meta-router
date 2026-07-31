@@ -161,7 +161,13 @@ def make_unique_proxy_names(proxies):
 
 
 def is_ru_node(proxy: dict) -> bool:
-    return str(proxy.get("role", "")).strip().lower() == "ru"
+    country_code = str(proxy.get("country_code", "")).upper()
+    country = str(proxy.get("country", "")).lower()
+
+    return (
+        country_code == "RU"
+        or country == "russia"
+    )
 
 def generate_mihomo_config():
     if not AVAILABLE_FILE.exists():
