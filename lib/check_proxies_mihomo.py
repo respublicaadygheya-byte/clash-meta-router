@@ -21,7 +21,7 @@ FILTERED_DIR = BASE_DIR / "cache" / "filtered"
 AVAILABLE_FILE = FILTERED_DIR / "available.json"
 LOG_DIR = FILTERED_DIR / "logs"
 
-TEST_URL = "http://cp.cloudflare.com/"
+TEST_URL = "https://www.gstatic.com/generate_204"
 
 SUPPORTED_MIHOMO_TYPES = {
     "vless",
@@ -233,7 +233,7 @@ def test_proxy(proxy, timeout):
                     "/dev/null",
                     "--write-out",
                     "%{http_code}",
-                    "http://cp.cloudflare.com/",
+                    "https://www.gstatic.com/generate_204",
                 ],
                 capture_output=True,
                 text=True,
