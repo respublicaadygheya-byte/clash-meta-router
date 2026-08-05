@@ -28,7 +28,6 @@ SUPPORTED_TYPES = {
     "socks5",
     "http",
     "https",
-    "naive",
     "anytls",
 }
 
